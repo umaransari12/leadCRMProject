@@ -1,0 +1,91 @@
+.sidebar {
+    width: 230px;
+    height: 100vh;
+    padding: 20px 0 0 20px;
+    background-color: var(--white);
+    top: 0;
+    left: 0;
+    border-right: 1px solid var(--border);
+    box-shadow: 4px 0 10px -5px rgba(0, 0, 0, 0.1);
+
+    .container_fluid {
+
+        .sidebar_inr {
+            display: flex;
+            flex-direction: column;
+
+            .nav_logo_otr {
+
+                .logo_otr {
+
+                    .logo {
+                        width: 150px;
+                        height: auto;
+                        object-fit: contain;
+                    }
+                }
+
+                .nav_otr {
+
+                    .nav_ul {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 10px 0;
+                        margin-top: 40px;
+
+                        .nav_li {
+
+                            .link {
+                                color: var(--text-dark);
+                                font-weight: 700;
+                                display: flex;
+                                align-items: center;
+                                gap: 0 8px;
+                                padding: 10px 10px;
+                                border-radius: 10px;
+
+                                .icon {
+                                    color: var(--text-gray);
+                                }
+
+                                &:hover {
+                                    background-color: var(--blue-lt);
+                                    color: var(--primary);
+                                    max-width: 130px;
+
+                                    .icon {
+                                        color: var(--primary);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            .action_otr {
+                margin-top: 200px;
+                cursor: pointer;
+
+                .link {
+                    color: var(--text-gray);
+                    display: flex;
+                    align-items: center;
+                    gap: 0 8px;
+
+                    .icon {
+                        color: var(--text-gray);
+                    }
+
+                    &:hover {
+                        color: var(--primary);
+
+                        .icon {
+                            color: var(--primary);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

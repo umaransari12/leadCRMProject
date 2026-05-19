@@ -1,0 +1,21 @@
+.dashboardlayout_sec{
+    background-color: var(--blue-lt);
+
+    .container_fluid{
+
+        .dashboardlayout_inr{
+
+            .row{
+                display: flex;
+                gap: 0 40px;
+
+                .col_sidebar_otr{
+
+                    .col_sidebar_inr{
+                        margin-top: -80px;
+                    }
+                }
+            }
+        }
+    }
+}
