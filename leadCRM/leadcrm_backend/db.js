@@ -9,7 +9,7 @@ const connectDb = async () => {
     // readyState 0 = disconnected: a cached (already resolved) promise is stale, so connect again.
     if (!cache.promise || mongoose.connection.readyState === 0) {
         cache.promise = mongoose
-            .connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 8000, bufferCommands: false })
+            .connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 8000, bufferCommands: false, maxPoolSize: 5 })
             .catch((err) => {
                 cache.promise = null;
                 throw err;

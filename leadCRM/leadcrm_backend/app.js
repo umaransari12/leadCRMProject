@@ -7,6 +7,7 @@ const { connectDb } = require('./db');
 getJwtSecret(); // fail fast if the JWT secret is missing
 
 const app = express();
+app.disable('x-powered-by');
 
 const allowedOrigins = getAllowedOrigins();
 app.use(cors({
@@ -22,9 +23,16 @@ app.get('/', (req, res) => {
     res.send('LeadCRM Backend Server is running perfectly!');
 });
 
-// Reports state only; does not open a database connection.
-app.get('/api/health', (req, res) => {
-    res.json({ success: true, status: 'ok', database: mongoose.connection.readyState === 1 ? 'connected' : 'not connected yet' });
+// Reports the real database state: it connects (reusing a cached connection) and pings before answering.
+app.get('/api/health', async (req, res) => {
+    try {
+        await connectDb();
+        await mongoose.connection.db.admin().ping();
+        res.json({ success: true, status: 'ok', database: 'connected' });
+    } catch (err) {
+        console.error('Health check: database unavailable:', err.message);
+        res.status(503).json({ success: false, status: 'degraded', database: 'unavailable' });
+    }
 });
 
 // Every other API route needs the database.

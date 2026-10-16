@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link, useNavigate } from "react-router-dom"
-import { HouseIcon, AddressBookIcon, UserPlusIcon, UsersIcon, ChartBarIcon, GearIcon, SignOutIcon } from "@phosphor-icons/react"
+import { HouseIcon, AddressBookIcon, UserPlusIcon, SignOutIcon } from "@phosphor-icons/react"
 import logo from "../../images/logo.svg"
 import "./sidebar.scss"
 
@@ -32,15 +32,6 @@ const Sidebar = () => {
                                 </li>
                                 <li className="nav_li">
                                    <Link to="/addlead" className='heading_l link'><UserPlusIcon size={22} className="icon" /> Add Lead</Link>
-                                </li>
-                                <li className="nav_li">
-                                   <Link to="/dashboard" className='heading_l link'><UsersIcon size={22} className="icon" /> Users</Link>
-                                </li>
-                                <li className="nav_li">
-                                   <Link to="/dashboard" className='heading_l link'><ChartBarIcon size={22} className="icon" /> Analytics</Link>
-                                </li>
-                                <li className="nav_li">
-                                   <Link to="/dashboard" className='heading_l link'><GearIcon size={22} className="icon" /> Settings</Link>
                                 </li>
                             </ul>
                         </nav>

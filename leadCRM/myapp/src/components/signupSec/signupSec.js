@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import { useGoogleLogin } from '@react-oauth/google';
 import { Link, useNavigate } from "react-router-dom"
 import { UserIcon, EnvelopeSimpleIcon, PhoneIcon, LockSimpleIcon } from "@phosphor-icons/react"
 import dashboard from "../../images/dashboard.png"
@@ -29,14 +28,6 @@ const SignupSec = () => {
         });
     };
 
-    const googleLogin = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-        console.log("Google Token Success:", tokenResponse);
-        alert("Google Auth Success! Data backend par bheja ja raha hai.");
-    },
-    onError: () => console.log('Google Login Failed')
-});
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
@@ -58,12 +49,17 @@ const SignupSec = () => {
             });
 
             if (response.data.success) {
-                alert('Account created successfully! Redirecting to Sign In...');
-                navigate('/'); 
+                // The API signs the new user in; go straight to the dashboard.
+                localStorage.setItem('token', response.data.token);
+                localStorage.setItem('user', JSON.stringify(response.data.user));
+                navigate('/dashboard');
             }
-      } catch (err) {
-            console.error("Full Frontend Error Objects:", err);
-            setError(err.response?.data?.message || err.message || 'Registration failed.');
+        } catch (err) {
+            setError(
+                err.response
+                    ? err.response.data?.message || 'Registration failed. Please try again.'
+                    : 'Could not reach the server. Check your connection and try again.'
+            );
         } finally {
             setLoading(false);
         }
@@ -185,16 +181,16 @@ const SignupSec = () => {
                                     </div>
                                     <div className="checkbox_otr">
                                         <input type="checkbox" className='check_box' required />
-                                        <label className='heading_l text'>I agree the <Link to="/" className='link'>Terms of Service</Link> and <Link to="/" className='link'>Privacy Policy</Link></label>
+                                        <label className='heading_l text'>I agree to the Terms of Service and Privacy Policy</label>
                                     </div>
                                     <button type="submit" className='primary_btn btn' disabled={loading}>
                                         {loading ? 'Creating Account...' : 'Create Account'}
                                     </button>
                                 </form>
                                 <p className="heading_l or">OR</p>
-                                <div className="action_otr" onClick={googleLogin}>
-                                    <img src={google} alt="icon" className='icon' />
-                                    <button type="button" className='btn'>Sign up with google</button>
+                                <div className="action_otr" title="Google sign-up is not available yet" style={{ opacity: 0.5, cursor: 'not-allowed' }}>
+                                    <img src={google} alt="" className='icon' />
+                                    <button type="button" className='btn' disabled style={{ cursor: 'not-allowed' }}>Sign up with Google (coming soon)</button>
                                 </div>
                             </div>
                         </div>

@@ -24,6 +24,21 @@ One Vercel project serves everything:
 ## Notes
 
 - Root `package.json` dependencies must match `leadcrm_backend/package.json` (the serverless function resolves packages from the project root).
-- The frontend builds warning-free in CI mode (`CI=true`), which is how Vercel builds. Three pre-existing unused-variable lint warnings (dashboardSec.js, signinPage.js) were removed for this.
+- The frontend builds warning-free in CI mode (`CI=true`), which is how Vercel builds.
 - Leads belong to the user that created them (`owner`). Leads created before ownership existed have no owner and are not returned by the API.
 - MongoDB Atlas must allow connections from Vercel (Network Access `0.0.0.0/0` on Hobby, which has no fixed IPs); keep the demo database user restricted to the demo database.
+
+## Tests
+
+- Frontend: `cd myapp && CI=true npx react-scripts test --watchAll=false`
+- Backend unit tests: `cd leadcrm_backend && npm test`
+- Live end-to-end smoke test (creates a throwaway user and dummy lead, then deletes the lead): `cd leadcrm_backend && BASE_URL=https://<your-app>.vercel.app npm run smoke`
+
+## Google sign-in
+
+Not enabled. The sign-up page shows a disabled "coming soon" button. To build it you need (1) a Google Cloud OAuth client ID with your Vercel domain under *Authorized JavaScript origins*, and (2) a backend endpoint that verifies the Google token (check its audience matches your client ID) before issuing the app JWT. Do not accept an unverified token.
+
+## Known limitations
+
+- Only the Dashboard, Leads and Add Lead pages exist; there are no Users, Analytics, Settings or password-reset pages yet.
+- No login rate limiting. Add it before exposing the app beyond a demo.

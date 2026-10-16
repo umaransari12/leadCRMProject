@@ -1,79 +1,96 @@
 import React, { useState, useEffect } from 'react'
-import { CalendarBlankIcon, UsersThreeIcon, ArrowUpIcon, UserPlusIcon, ChatCircleDotsIcon, ChartLineUpIcon } from "@phosphor-icons/react"
+import { CalendarBlankIcon, UsersThreeIcon, UserPlusIcon, ChatCircleDotsIcon, ChartLineUpIcon } from "@phosphor-icons/react"
 import "./dashboardSec.scss"
 import api from '../../api'
 
-const DashboardSec = () => {
-    
-    const [, setLeads] = useState([]);
-    const [stats, setStats] = useState({
-        total: 0,
-        newLeads: 0,
-        contacted: 0,
-        converted: 0
+const DAYS = 7;
+const CHART_WIDTH = 600;
+const CHART_HEIGHT = 200;
+const CHART_PADDING = 20;
+
+const dayKey = (date) => `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+const shortDate = (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+// The last DAYS calendar days (oldest first), each with the number of leads created that day per status.
+const buildDailySeries = (leads) => {
+    const today = new Date();
+    const days = [];
+    for (let i = DAYS - 1; i >= 0; i--) {
+        const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+        days.push({ date, key: dayKey(date), New: 0, Contacted: 0, Converted: 0 });
+    }
+    const byKey = Object.fromEntries(days.map((day) => [day.key, day]));
+    leads.forEach((lead) => {
+        if (!lead.createdAt) return;
+        const day = byKey[dayKey(new Date(lead.createdAt))];
+        const status = (lead.status || 'New').toLowerCase();
+        if (!day) return;
+        if (status === 'contacted') day.Contacted += 1;
+        else if (status === 'converted') day.Converted += 1;
+        else day.New += 1;
     });
+    return days;
+};
+
+const DashboardSec = () => {
+    const [leads, setLeads] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
 
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
                 const response = await api.get('/api/leads');
                 if (response.data.success) {
-                    const allLeads = response.data.data;
-                    setLeads(allLeads);
-
-                    const countNew = allLeads.filter(l => l.status?.toLowerCase() === 'new').length;
-                    const countContacted = allLeads.filter(l => l.status?.toLowerCase() === 'contacted').length;
-                    
-                    const countConverted = allLeads.filter(l => 
-                        l.status?.toLowerCase() === 'converted' || l.status?.toLowerCase() === 'won' || l.status?.toLowerCase() === 'qualified'
-                    ).length;
-
-                    setStats({
-                        total: allLeads.length,
-                        newLeads: countNew,
-                        contacted: countContacted,
-                        converted: countConverted
-                    });
+                    setLeads(response.data.data);
+                } else {
+                    setError('Could not load dashboard data.');
                 }
-            } catch (error) {
-                console.error("Dashboard stats fetch karne mein masla aya:", error);
+            } catch (err) {
+                setError('Could not load dashboard data. Please refresh the page.');
+            } finally {
+                setLoading(false);
             }
         };
 
         fetchDashboardData();
     }, []);
 
-    const getPercentValue = (value) => {
-        if (stats.total === 0) return 0;
-        return (value / stats.total) * 100;
+    const countStatus = (status) => leads.filter(l => (l.status || 'New').toLowerCase() === status).length;
+    const stats = {
+        total: leads.length,
+        newLeads: countStatus('new'),
+        contacted: countStatus('contacted'),
+        converted: countStatus('converted')
     };
 
-    const calculatePercent = (value) => {
-        return getPercentValue(value).toFixed(1) + "%";
-    };
+    const series = buildDailySeries(leads);
+    const addedLastWeek = series.reduce((sum, day) => sum + day.New + day.Contacted + day.Converted, 0);
+    const maxCount = Math.max(...series.map((day) => Math.max(day.New, day.Contacted, day.Converted)), 0);
+    const yMax = Math.max(4, Math.ceil(maxCount / 4) * 4);
+    const yLabels = [yMax, (yMax * 3) / 4, yMax / 2, yMax / 4, 0];
 
-    const getGraphY = (value) => {
-        const percentage = getPercentValue(value);
+    const getX = (index) => (index * CHART_WIDTH) / (DAYS - 1);
+    const getY = (count) => CHART_HEIGHT - CHART_PADDING - (count / yMax) * (CHART_HEIGHT - 2 * CHART_PADDING);
+    const linePath = (status) => series.map((day, i) => `${i === 0 ? 'M' : 'L'}${getX(i)},${getY(day[status])}`).join(' ');
 
-        return 200 - (percentage * 1.5) - 20; 
-    };
-
-    const yNew = getGraphY(stats.newLeads);
-    const yContacted = getGraphY(stats.contacted);
-    const yConverted = getGraphY(stats.converted);
+    const getPercentValue = (value) => (stats.total === 0 ? 0 : (value / stats.total) * 100);
+    const calculatePercent = (value) => getPercentValue(value).toFixed(1) + "%";
 
     const pNew = getPercentValue(stats.newLeads);
     const pContacted = getPercentValue(stats.contacted);
 
     const donutStyle = {
-        background: stats.total === 0 
-            ? '#333' 
+        background: stats.total === 0
+            ? '#333'
             : `conic-gradient(
-                #a855f7 0% ${pNew}%, 
-                #3b82f6 ${pNew}% ${pNew + pContacted}%, 
+                #a855f7 0% ${pNew}%,
+                #3b82f6 ${pNew}% ${pNew + pContacted}%,
                 #22c55e ${pNew + pContacted}% 100%
             )`
     };
+
+    const rangeText = `${shortDate(series[0].date)}, ${series[0].date.getFullYear()} - ${shortDate(series[DAYS - 1].date)}, ${series[DAYS - 1].date.getFullYear()}`;
 
     return (
         <div className="dashboard_sec">
@@ -85,10 +102,12 @@ const DashboardSec = () => {
                             <p className="heading_l desc">Overview of your leads and activities</p>
                         </div>
                         <div className="date_picker_otr">
-                            <p className="heading_l date">May 10, 2026 - May 20, 2026</p>
+                            <p className="heading_l date">{rangeText}</p>
                             <CalendarBlankIcon size={22} className="icon" />
                         </div>
                     </div>
+                    {error && <p className="heading_l desc" role="alert">{error}</p>}
+                    {loading && <p className="heading_l desc">Loading dashboard...</p>}
                     <div className="row">
                         <div className="col_card_otr">
                             <div className="col_card_inr">
@@ -98,7 +117,7 @@ const DashboardSec = () => {
                                 <div className="content_otr">
                                     <p className="heading_l label">Total Leads</p>
                                     <h2 className="heading_h2 num">{stats.total}</h2>
-                                    <p className="heading_m text"><ArrowUpIcon size={12} className="icon" /> <span className='text_inr'>12.5%</span> from last month</p>
+                                    <p className="heading_m text"><span className='text_inr'>{addedLastWeek}</span> added in the last {DAYS} days</p>
                                 </div>
                             </div>
                         </div>
@@ -110,7 +129,7 @@ const DashboardSec = () => {
                                 <div className="content_otr">
                                     <p className="heading_l label">New Lead</p>
                                     <h2 className="heading_h2 num">{stats.newLeads}</h2>
-                                    <p className="heading_m text"><ArrowUpIcon size={12} className="icon" /> <span className='text_inr'>8.2%</span> from last month</p>
+                                    <p className="heading_m text"><span className='text_inr'>{calculatePercent(stats.newLeads)}</span> of all leads</p>
                                 </div>
                             </div>
                         </div>
@@ -122,7 +141,7 @@ const DashboardSec = () => {
                                 <div className="content_otr">
                                     <p className="heading_l label">Contacted</p>
                                     <h2 className="heading_h2 num">{stats.contacted}</h2>
-                                    <p className="heading_m text"><ArrowUpIcon size={12} className="icon" /> <span className='text_inr'>10.1%</span> from last month</p>
+                                    <p className="heading_m text"><span className='text_inr'>{calculatePercent(stats.contacted)}</span> of all leads</p>
                                 </div>
                             </div>
                         </div>
@@ -134,7 +153,7 @@ const DashboardSec = () => {
                                 <div className="content_otr">
                                     <p className="heading_l label">Converted</p>
                                     <h2 className="heading_h2 num">{stats.converted}</h2>
-                                    <p className="heading_m text"><ArrowUpIcon size={12} className="icon" /> <span className='text_inr'>15.3%</span> from last month</p>
+                                    <p className="heading_m text"><span className='text_inr'>{calculatePercent(stats.converted)}</span> of all leads</p>
                                 </div>
                             </div>
                         </div>
@@ -143,7 +162,7 @@ const DashboardSec = () => {
                         <div className="col_graph_otr">
                             <div className="col_graph_inr">
                                 <div className="graph_top">
-                                    <h3 className="haeing_h3 heading">Leads Overview</h3>
+                                    <h3 className="haeing_h3 heading">Leads Created (last {DAYS} days)</h3>
                                     <div className="legend">
                                         <div className="legend-item">
                                             <div className="dot purple"></div><p className="heading_l text">New</p>
@@ -158,41 +177,27 @@ const DashboardSec = () => {
                                 </div>
                                 <div className="chart-wrapper">
                                     <div className="y-axis">
-                                        <p className='heading_l num'>100%</p>
-                                        <p className='heading_l num'>75%</p>
-                                        <p className='heading_l num'>50%</p>
-                                        <p className='heading_l num'>25%</p>
-                                        <p className='heading_l num'>0%</p>
+                                        {yLabels.map((label) => (
+                                            <p className='heading_l num' key={label}>{label}</p>
+                                        ))}
                                     </div>
                                     <div className="svg-container">
-                                        <svg viewBox="0 0 600 200" preserveAspectRatio="none" className="graph-svg">
+                                        <svg viewBox="0 0 600 200" preserveAspectRatio="none" className="graph-svg" role="img" aria-label="Leads created per day by status">
                                             <line x1="0" y1="0" x2="600" y2="0" className="grid-line" />
                                             <line x1="0" y1="50" x2="600" y2="50" className="grid-line" />
                                             <line x1="0" y1="100" x2="600" y2="100" className="grid-line" />
                                             <line x1="0" y1="150" x2="600" y2="150" className="grid-line" />
                                             <line x1="0" y1="200" x2="600" y2="200" className="grid-line" />
-                                            
-                                         
-                                            <path
-                                                d={`M0,${yNew} C150,${yNew - 30} 300,${yNew + 30} 450,${yNew - 15} 600,${yNew}`}
-                                                className="line-new"
-                                            />
-                                            <path
-                                                d={`M0,${yContacted} C150,${yContacted + 20} 300,${yContacted - 40} 450,${yContacted + 10} 600,${yContacted}`}
-                                                className="line-contacted"
-                                            />
-                                            <path
-                                                d={`M0,${yConverted} C150,${yConverted - 10} 300,${yConverted + 20} 450,${yConverted - 30} 600,${yConverted}`}
-                                                className="line-converted"
-                                            />
+
+                                            <path d={linePath('New')} className="line-new" />
+                                            <path d={linePath('Contacted')} className="line-contacted" />
+                                            <path d={linePath('Converted')} className="line-converted" />
                                         </svg>
                                     </div>
                                     <div className="x-axis">
-                                        <p className='heading_l num'>May 18</p>
-                                        <p className='heading_l num'>May 25</p>
-                                        <p className='heading_l num'>Jun 01</p>
-                                        <p className='heading_l num'>Jun 08</p>
-                                        <p className='heading_l num'>Jun 15</p>
+                                        {series.map((day) => (
+                                            <p className='heading_l num' key={day.key}>{shortDate(day.date)}</p>
+                                        ))}
                                     </div>
                                 </div>
                             </div>

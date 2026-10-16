@@ -35,7 +35,11 @@ exports.register = async (req, res) => {
             return res.status(400).json({ success: false, message: 'User already exists' });
         }
 
-        const usernameStr = email.split('@')[0] + Math.floor(100 + Math.random() * 900);
+        // Use the username the user chose (letters, numbers, . _ -), otherwise generate one from the email.
+        const requestedUsername = asString(body.username);
+        const usernameStr = /^[A-Za-z0-9._-]{2,30}$/.test(requestedUsername)
+            ? requestedUsername
+            : email.split('@')[0] + Math.floor(100 + Math.random() * 900);
 
         const user = await User.create({
             name,

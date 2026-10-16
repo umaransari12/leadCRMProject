@@ -1,16 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react'; 
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { MagnifyingGlassIcon, CaretDownIcon, PlusIcon } from "@phosphor-icons/react";
 import "./leadSec.scss";
 import AddLeadSec from "../addLeadSec/addLeadSec"; 
 import api from '../../api';
+
+// Older leads were saved with lower-case statuses ("new"); always show the canonical label.
+const statusLabel = (status) => {
+    const wanted = (status || 'New').toLowerCase();
+    return ['New', 'Contacted', 'Converted'].find((s) => s.toLowerCase() === wanted) || status;
+};
 
 const LeadSec = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [leads, setLeads] = useState([]); 
     const [loading, setLoading] = useState(true);
 
-    const [searchQuery, setSearchQuery] = useState('');
+    const [searchParams] = useSearchParams();
+    const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
     const [selectedStatus, setSelectedStatus] = useState('All');
     const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
 
@@ -27,8 +34,6 @@ const LeadSec = () => {
             setLoading(true);
             const response = await api.get('/api/leads');
             
-            console.log("Backend Response Raw Data:", response.data);
-
             if (response.data) {
                 if (Array.isArray(response.data)) {
                     setLeads(response.data);
@@ -43,7 +48,7 @@ const LeadSec = () => {
                 setLeads([]);
             }
         } catch (error) {
-            console.error("Database se data lane mein masla aya:", error);
+            console.error('Could not load leads:', error.message);
             setLeads([]);
         } finally {
             setLoading(false);
@@ -75,13 +80,11 @@ const LeadSec = () => {
         try {
             const response = await api.put(`/api/leads/${id}`, { status: newStatus });
             if (response.data.success) {
-                alert('Lead status updated successfully!');
                 setActiveActionId(null);
                 fetchLeads();
             }
         } catch (error) {
-            alert('Failed to update status');
-            console.error(error);
+            alert(error.response?.data?.message || 'Failed to update status');
         }
     };
 
@@ -90,13 +93,11 @@ const LeadSec = () => {
             try {
                 const response = await api.delete(`/api/leads/${id}`);
                 if (response.data.success) {
-                    alert('Lead deleted successfully!');
                     setActiveActionId(null);
                     fetchLeads();
                 }
             } catch (error) {
-                alert('Failed to delete lead');
-                console.error(error);
+                alert(error.response?.data?.message || 'Failed to delete lead');
             }
         }
     };
@@ -226,7 +227,7 @@ const LeadSec = () => {
                                             <td className='heading_l data'>{lead.phone || 'N/A'}</td>
                                             <td className='heading_l data'>
                                                 <span className={`status-badge ${(lead.status || 'New').toLowerCase()}`}>
-                                                    {lead.status || 'New'}
+                                                    {statusLabel(lead.status)}
                                                 </span>
                                             </td>
                                             <td className='heading_l data'>{lead.source || 'Website'}</td>
@@ -239,6 +240,7 @@ const LeadSec = () => {
                                             <td className='heading_l data actions-cell'>
                                                 <button 
                                                     className="dots-btn"
+                                                    aria-label={`Actions for ${lead.name || 'lead'}`}
                                                     onClick={() => setActiveActionId(activeActionId === lead._id ? null : lead._id)}
                                                 >
                                                     ⋮

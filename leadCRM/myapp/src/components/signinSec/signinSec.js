@@ -32,7 +32,11 @@ const SigninSec = () => {
                 navigate("/dashboard");
             }
         } catch (err) {
-            setError(err.response?.data?.message || 'Login failed. Please try again.');
+            setError(
+                err.response
+                    ? err.response.data?.message || 'Login failed. Please try again.'
+                    : 'Could not reach the server. Check your connection and try again.'
+            );
         } finally {
             setLoading(false);
         }
@@ -65,14 +69,13 @@ const SigninSec = () => {
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
                                             className='input' 
-                                            placeholder='umarhayat@gmail.com' 
+                                            placeholder='you@example.com'
                                             required
                                         />
                                     </div>
                                     <div className="input_otr">
                                         <div className="password">
                                             <label className='heading_l text'>Password</label>
-                                            <Link to="/" className='link'>Forget Password?</Link>
                                         </div>
                                         <input 
                                             type="password" 
@@ -82,10 +85,6 @@ const SigninSec = () => {
                                             placeholder='Enter your password'
                                             required
                                         />
-                                    </div>
-                                    <div className="checkbox_otr">
-                                        <input type="checkbox" id="remember" name="remember" className='check_box' />
-                                        <label className='heading_l text'>Remember me</label>
                                     </div>
                                     <button type="submit" className='primary_btn btn' disabled={loading}>
                                         {loading ? 'Signing In...' : 'Sign In'}

@@ -1,42 +1,44 @@
-import React, { useState, useEffect } from 'react'
-import { Link, useNavigate } from "react-router-dom"
-import { ListIcon, MagnifyingGlassIcon, BellIcon, CaretDownIcon } from "@phosphor-icons/react"
-import img from "../../images/umar.png"
+import React, { useState } from 'react'
+import { useNavigate } from "react-router-dom"
+import { ListIcon, MagnifyingGlassIcon, CaretDownIcon } from "@phosphor-icons/react"
 import "./header.scss"
 
-const navLinks = [
-    { id: 1, title: "My Profile", path: "/profile" },
-    { id: 2, title: "Settings", path: "/settings" },
-    { id: 3, title: "Support", path: "/support" }
-];
+// The signed-in user was stored by the sign-in/sign-up flow; nothing about a specific person is hardcoded here.
+const readStoredUser = () => {
+    try {
+        const parsed = JSON.parse(localStorage.getItem('user') || 'null');
+        return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (error) {
+        return {};
+    }
+};
+
+const getInitials = (name) =>
+    (name || '')
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0].toUpperCase())
+        .join('') || '?';
 
 const Header = () => {
     const navigate = useNavigate();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    
-    const [userData, setUserData] = useState({ name: 'Umar Hayat' });
+    const [searchText, setSearchText] = useState('');
+    const [user] = useState(readStoredUser);
 
-    useEffect(() => {
-     
-        const savedUser = localStorage.getItem('user');
-        if (savedUser) {
-            try {
-                const parsedUser = JSON.parse(savedUser);
-                if (parsedUser && parsedUser.name) {
-                    setUserData({ name: parsedUser.name });
-                }
-            } catch (error) {
-                console.error("Header localstorage parsing error:", error);
-            }
-        }
-    }, []);
+    const displayName = user.name || 'User';
 
-   
-    const handleLogout = (e) => {
-        e.preventDefault();
+    const handleLogout = () => {
         localStorage.removeItem('token');
-        localStorage.removeItem('user'); 
-        navigate("/"); 
+        localStorage.removeItem('user');
+        navigate("/");
+    };
+
+    const handleSearch = (e) => {
+        e.preventDefault();
+        const query = searchText.trim();
+        navigate(query ? `/lead?q=${encodeURIComponent(query)}` : '/lead');
     };
 
     return (
@@ -45,50 +47,43 @@ const Header = () => {
                 <div className="header_inr">
                     <div className="menu_searchbar_otr">
                         <div className="menu_wrapper">
-                            <button className="menu_otr" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+                            <button type="button" className="menu_otr" onClick={() => setIsMenuOpen(!isMenuOpen)} aria-label="Menu" aria-expanded={isMenuOpen}>
                                 <ListIcon size={22} className='icon' />
                             </button>
                             {isMenuOpen && (
                                 <ul className="nav_dropdown">
-                                    {navLinks.map((link) => (
-                                        <li key={link.id} onClick={() => setIsMenuOpen(false)}>
-                                            <Link to={link.path} className="nav_link">
-                                                {link.title}
-                                            </Link>
-                                        </li>
-                                    ))}
-                                   
-                                    <li onClick={handleLogout}>
-                                        <a href="/" className="nav_link">Logout</a>
+                                    <li>
+                                        <button type="button" className="nav_link" onClick={handleLogout}>Logout</button>
                                     </li>
                                 </ul>
                             )}
                         </div>
 
-                        <div className="searchbar_otr">
-                            <Link to="/" className='link'>
+                        <form className="searchbar_otr" onSubmit={handleSearch} role="search">
+                            <button type="submit" className='link' aria-label="Search leads">
                                 <MagnifyingGlassIcon size={16} className='icon' />
-                            </Link>
-                            <input type="text" placeholder="Search leads, name, email.." className='input' />
-                            <p className="heading_l text">Ctrl + K</p>
-                        </div>
+                            </button>
+                            <input
+                                type="text"
+                                placeholder="Search leads, name, email.."
+                                className='input'
+                                value={searchText}
+                                onChange={(e) => setSearchText(e.target.value)}
+                                aria-label="Search leads"
+                            />
+                        </form>
                     </div>
 
                     <div className="notification_profile_otr">
-                        <Link to="/" className='notification'>
-                            <BellIcon size={22} className="icon" />
-                        </Link>
                         <div className="profile_otr">
                             <div className="img_otr">
-                                <img src={img} alt="img" className='img' />
+                                <span className="img initials" aria-hidden="true">{getInitials(displayName)}</span>
                             </div>
                             <div className="content">
-                                <h3 className="heading_h3 name">{userData.name}</h3>
-                                <p className="heading_l desc">Admin</p>
+                                <h3 className="heading_h3 name">{displayName}</h3>
+                                {user.email && <p className="heading_l desc">{user.email}</p>}
                             </div>
-                            <Link to="/" className='arrow'>
-                                <CaretDownIcon size={22} className="icon" />
-                            </Link>
+                            <CaretDownIcon size={22} className="icon" aria-hidden="true" />
                         </div>
                     </div>
                 </div>

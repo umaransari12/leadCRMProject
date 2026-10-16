@@ -134,3 +134,37 @@
         }
     }
 }
+
+// Buttons that replaced links (logout, search submit) must look like the old links.
+.header {
+    .nav_dropdown .nav_link {
+        width: 100%;
+        background: none;
+        border: none;
+        text-align: left;
+        cursor: pointer;
+        font-family: inherit;
+    }
+
+    .searchbar_otr .link {
+        background: none;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+    }
+
+    .img_otr .initials {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--primary);
+        color: #fff;
+        font-size: 14px;
+        font-weight: 600;
+    }
+}
