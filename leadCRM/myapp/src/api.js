@@ -1,8 +1,10 @@
 import axios from 'axios';
 
-// In production (Vercel) the API is served from the same origin, so REACT_APP_API_URL is empty ('') and
-// requests use relative /api/... paths. In local development it is unset and defaults to the local backend.
-const baseURL = process.env.REACT_APP_API_URL !== undefined ? process.env.REACT_APP_API_URL : 'http://localhost:5000';
+// Production builds (Vercel) serve the API from the same origin, so the default base URL is '' and requests use
+// relative /api/... paths. Local development defaults to the local backend. REACT_APP_API_URL overrides either default
+// when set (an empty value also means same-origin).
+const defaultBaseURL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
+const baseURL = process.env.REACT_APP_API_URL !== undefined ? process.env.REACT_APP_API_URL : defaultBaseURL;
 
 const api = axios.create({ baseURL });
 
