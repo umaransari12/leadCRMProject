@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom"
 import dashboard from "../../images/dashboard.png"
 import logo from "../../images/logo.svg"
 import "./signinSec.scss"
-import axios from 'axios'
+import api from '../../api'
 
 const SigninSec = () => {
     const navigate = useNavigate();
@@ -19,7 +19,7 @@ const SigninSec = () => {
         setLoading(true);
 
         try {
-            const response = await axios.post('http://localhost:5000/api/auth/login', {
+            const response = await api.post('/api/auth/login', {
                 email,
                 password
             });

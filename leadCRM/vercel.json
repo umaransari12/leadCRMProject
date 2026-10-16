@@ -1,0 +1,14 @@
+{
+  "installCommand": "npm install && npm --prefix myapp install",
+  "buildCommand": "npm --prefix myapp run build",
+  "outputDirectory": "myapp/build",
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 15
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

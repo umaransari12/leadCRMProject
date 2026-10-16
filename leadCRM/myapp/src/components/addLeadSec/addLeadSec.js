@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import "./addLeadSec.scss";
 import { X } from "@phosphor-icons/react";
-import axios from 'axios'; 
+import api from '../../api';
 
 const AddLeadSec = ({ onClose, onLeadAdded }) => {
     const [formData, setFormData] = useState({
@@ -30,14 +30,7 @@ const AddLeadSec = ({ onClose, onLeadAdded }) => {
         setError('');
 
         try {
-            const token = localStorage.getItem('token');
-
-            const response = await axios.post('http://localhost:5000/api/leads', formData, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}` 
-                }
-            });
+            const response = await api.post('/api/leads', formData);
             
             if (response.data.success) {
                 alert('Lead added successfully!'); 

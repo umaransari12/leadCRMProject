@@ -1,33 +1,48 @@
 const User = require('../models/user');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const { getJwtSecret } = require('../config');
 
 const generateToken = (id) => {
-    
-    const secretKey = String(process.env.JWT_SECRET || 'leadcrm_secret_key_2026');
-    return jwt.sign({ id }, secretKey, {
+    return jwt.sign({ id }, getJwtSecret(), {
         expiresIn: '30d'
     });
 };
 
+// Only plain strings are accepted from the request body (blocks operator objects like { "$ne": null }).
+const asString = (value) => (typeof value === 'string' ? value.trim() : '');
+
 exports.register = async (req, res) => {
     try {
-        
-        const { name, email, phone, password } = req.body;
+        const body = req.body || {};
+        const name = asString(body.name);
+        const email = asString(body.email).toLowerCase();
+        const phone = asString(body.phone);
+        const password = typeof body.password === 'string' ? body.password : '';
+
+        if (!name || !email || !phone || !password) {
+            return res.status(400).json({ success: false, message: 'Name, email, phone and password are required' });
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.status(400).json({ success: false, message: 'Please enter a valid email address' });
+        }
+        if (password.length < 8 || password.length > 72) {
+            return res.status(400).json({ success: false, message: 'Password must be between 8 and 72 characters' });
+        }
 
         const userExists = await User.findOne({ email });
         if (userExists) {
             return res.status(400).json({ success: false, message: 'User already exists' });
         }
 
-        const usernameStr = email ? email.split('@')[0] + Math.floor(100 + Math.random() * 900) : null;
+        const usernameStr = email.split('@')[0] + Math.floor(100 + Math.random() * 900);
 
-        const user = await User.create({ 
-            name, 
-            email, 
-            phone, 
+        const user = await User.create({
+            name,
+            email,
+            phone,
             username: usernameStr,
-            password 
+            password
         });
 
         res.status(201).json({
@@ -36,13 +51,22 @@ exports.register = async (req, res) => {
             user: { id: user._id, name: user.name, email: user.email }
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        if (error && error.code === 11000) {
+            return res.status(400).json({ success: false, message: 'User already exists' });
+        }
+        console.error('Register error:', error);
+        res.status(500).json({ success: false, message: 'Registration failed' });
     }
 };
 
 exports.login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const body = req.body || {};
+        const email = asString(body.email).toLowerCase();
+        const password = typeof body.password === 'string' ? body.password : '';
+        if (!email || !password) {
+            return res.status(400).json({ success: false, message: 'Email and password are required' });
+        }
 
         const user = await User.findOne({ email }).select('+password');
         if (!user) {
@@ -60,36 +84,28 @@ exports.login = async (req, res) => {
             user: { id: user._id, name: user.name, email: user.email }
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        console.error('Login error:', error);
+        res.status(500).json({ success: false, message: 'Login failed' });
     }
 };
 
 exports.protect = async (req, res, next) => {
-    let token;
-
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-        try {
-            token = req.headers.authorization.split(' ')[1];
-            
-            const secretKey = String(process.env.JWT_SECRET || 'leadcrm_secret_key_2026');
-            const decoded = jwt.verify(token, secretKey);
-            
-            req.user = await User.findById(decoded.id).select('-password');
-            if (!req.user) {
-                return res.status(401).json({ success: false, message: 'User not found' });
-            }
-            return next();
-        } catch (error) {
-            console.error("Backend Protect Middleware Error:", error.message);
-            return res.status(401).json({ 
-                success: false, 
-                message: 'Not authorized, token failed', 
-                errorDetails: error.message 
-            });
-        }
+    const header = req.headers.authorization || '';
+    if (!header.startsWith('Bearer ')) {
+        return res.status(401).json({ success: false, message: 'Not authorized, no token' });
     }
 
-    if (!token) {
-        return res.status(401).json({ success: false, message: 'Not authorized, no token' });
+    try {
+        const token = header.split(' ')[1];
+        const decoded = jwt.verify(token, getJwtSecret(), { algorithms: ['HS256'] });
+
+        const user = await User.findById(decoded.id).select('-password');
+        if (!user) {
+            return res.status(401).json({ success: false, message: 'User not found' });
+        }
+        req.user = user;
+        return next();
+    } catch (error) {
+        return res.status(401).json({ success: false, message: 'Not authorized, token failed' });
     }
 };

@@ -1,0 +1,8 @@
+# Never upload secrets or local artifacts
+.env
+.env.*
+!.env.example
+!myapp/.env.production
+**/node_modules
+myapp/build
+.vercel

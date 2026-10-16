@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { CalendarBlankIcon, UsersThreeIcon, ArrowUpIcon, UserPlusIcon, ChatCircleDotsIcon, ChartLineUpIcon } from "@phosphor-icons/react"
 import "./dashboardSec.scss"
-import axios from 'axios'
+import api from '../../api'
 
 const DashboardSec = () => {
     
-    const [leads, setLeads] = useState([]);
+    const [, setLeads] = useState([]);
     const [stats, setStats] = useState({
         total: 0,
         newLeads: 0,
@@ -16,7 +16,7 @@ const DashboardSec = () => {
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
-                const response = await axios.get('http://localhost:5000/api/leads');
+                const response = await api.get('/api/leads');
                 if (response.data.success) {
                     const allLeads = response.data.data;
                     setLeads(allLeads);
@@ -64,7 +64,6 @@ const DashboardSec = () => {
 
     const pNew = getPercentValue(stats.newLeads);
     const pContacted = getPercentValue(stats.contacted);
-    const pConverted = getPercentValue(stats.converted);
 
     const donutStyle = {
         background: stats.total === 0 

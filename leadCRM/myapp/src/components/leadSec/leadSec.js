@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { MagnifyingGlassIcon, CaretDownIcon, PlusIcon } from "@phosphor-icons/react";
 import "./leadSec.scss";
 import AddLeadSec from "../addLeadSec/addLeadSec"; 
-import axios from 'axios'; 
+import api from '../../api';
 
 const LeadSec = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -22,19 +22,10 @@ const LeadSec = () => {
     const statusDropdownRef = useRef(null);
     const actionsMenuRef = useRef(null);
 
-    const getAuthHeaders = () => {
-        const token = localStorage.getItem('token');
-        return {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        };
-    };
-
     const fetchLeads = async () => {
         try {
             setLoading(true);
-            const response = await axios.get('http://localhost:5000/api/leads', getAuthHeaders());
+            const response = await api.get('/api/leads');
             
             console.log("Backend Response Raw Data:", response.data);
 
@@ -82,11 +73,7 @@ const LeadSec = () => {
 
     const handleUpdateStatus = async (id, newStatus) => {
         try {
-            const response = await axios.put(
-                `http://localhost:5000/api/leads/${id}`, 
-                { status: newStatus },
-                getAuthHeaders()
-            );
+            const response = await api.put(`/api/leads/${id}`, { status: newStatus });
             if (response.data.success) {
                 alert('Lead status updated successfully!');
                 setActiveActionId(null);
@@ -101,7 +88,7 @@ const LeadSec = () => {
     const handleDeleteLead = async (id) => {
         if (window.confirm('Are you sure you want to delete this lead?')) {
             try {
-                const response = await axios.delete(`http://localhost:5000/api/leads/${id}`, getAuthHeaders());
+                const response = await api.delete(`/api/leads/${id}`);
                 if (response.data.success) {
                     alert('Lead deleted successfully!');
                     setActiveActionId(null);

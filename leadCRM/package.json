@@ -1,0 +1,17 @@
+{
+  "name": "leadcrm",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Vercel project root: React frontend (myapp) + Express API (leadcrm_backend) served from api/index.js. Dependencies below must match leadcrm_backend/package.json so the serverless function can resolve them.",
+  "engines": {
+    "node": "22.x"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^8.24.0"
+  }
+}
