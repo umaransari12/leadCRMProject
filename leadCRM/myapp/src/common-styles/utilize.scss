@@ -8,8 +8,16 @@ img {
     height: auto;
 }
 body{
-    height: 100vh;
+    min-height: 100vh;
     width: 100%;
+    font-family: 'Inter18pt-Regular', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
+    color: var(--text-dark);
+    -webkit-font-smoothing: antialiased;
+}
+
+button, input, select, textarea {
+    font-family: inherit;
 }
 
 .container_fluid {

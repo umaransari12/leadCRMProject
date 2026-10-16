@@ -1,91 +1,116 @@
-.sidebar {
-    width: 230px;
-    height: 100vh;
-    padding: 20px 0 0 20px;
-    background-color: var(--white);
+.app_sidebar {
+    position: sticky;
     top: 0;
-    left: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 16px;
+    background-color: var(--white);
     border-right: 1px solid var(--border);
-    box-shadow: 4px 0 10px -5px rgba(0, 0, 0, 0.1);
+    overflow-y: auto;
+    z-index: 60;
 
-    .container_fluid {
+    .sidebar_top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 8px;
 
-        .sidebar_inr {
-            display: flex;
-            flex-direction: column;
+        .logo_link .logo {
+            width: 150px;
+            height: auto;
+            object-fit: contain;
+            display: block;
+        }
 
-            .nav_logo_otr {
+        .sidebar_close {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-gray);
+            padding: 6px;
+            border-radius: 8px;
 
-                .logo_otr {
-
-                    .logo {
-                        width: 150px;
-                        height: auto;
-                        object-fit: contain;
-                    }
-                }
-
-                .nav_otr {
-
-                    .nav_ul {
-                        display: flex;
-                        flex-direction: column;
-                        gap: 10px 0;
-                        margin-top: 40px;
-
-                        .nav_li {
-
-                            .link {
-                                color: var(--text-dark);
-                                font-weight: 700;
-                                display: flex;
-                                align-items: center;
-                                gap: 0 8px;
-                                padding: 10px 10px;
-                                border-radius: 10px;
-
-                                .icon {
-                                    color: var(--text-gray);
-                                }
-
-                                &:hover {
-                                    background-color: var(--blue-lt);
-                                    color: var(--primary);
-                                    max-width: 130px;
-
-                                    .icon {
-                                        color: var(--primary);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            .action_otr {
-                margin-top: 200px;
-                cursor: pointer;
-
-                .link {
-                    color: var(--text-gray);
-                    display: flex;
-                    align-items: center;
-                    gap: 0 8px;
-
-                    .icon {
-                        color: var(--text-gray);
-                    }
-
-                    &:hover {
-                        color: var(--primary);
-
-                        .icon {
-                            color: var(--primary);
-                        }
-                    }
-                }
-            }
+            &:hover { color: var(--primary); background: var(--blue-lt); }
         }
     }
+
+    .sidebar_nav {
+        margin-top: 32px;
+
+        ul {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            list-style: none;
+        }
+
+        .nav_link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            color: var(--text-dark);
+            font-weight: 600;
+            transition: background-color 0.2s, color 0.2s;
+
+            .icon { color: var(--text-gray); flex-shrink: 0; }
+
+            &:hover,
+            &.active {
+                background-color: var(--blue-lt);
+                color: var(--primary);
+
+                .icon { color: var(--primary); }
+            }
+
+            &.active { box-shadow: inset 3px 0 0 var(--primary); }
+        }
+    }
+
+    .logout_btn {
+        margin-top: auto;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border: none;
+        background: none;
+        cursor: pointer;
+        color: var(--text-gray);
+        border-radius: 10px;
+        text-align: left;
+
+        &:hover { color: var(--primary); background: var(--blue-lt); }
+    }
+}
+
+@media (max-width: 960px) {
+    .app_sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 270px;
+        max-width: 85vw;
+        transform: translateX(-100%);
+        // visibility keeps the closed drawer out of the keyboard tab order and the accessibility tree.
+        visibility: hidden;
+        transition: transform 0.25s ease, visibility 0s linear 0.25s;
+        box-shadow: none;
+
+        &.open {
+            transform: none;
+            visibility: visible;
+            transition-delay: 0s;
+            box-shadow: 8px 0 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .sidebar_top .sidebar_close { display: inline-flex; }
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app_sidebar { transition: none; }
 }

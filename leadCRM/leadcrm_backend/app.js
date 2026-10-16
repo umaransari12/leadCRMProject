@@ -8,6 +8,8 @@ getJwtSecret(); // fail fast if the JWT secret is missing
 
 const app = express();
 app.disable('x-powered-by');
+// Behind Vercel's proxy: use the real client IP (needed by the rate limiter).
+app.set('trust proxy', 1);
 
 const allowedOrigins = getAllowedOrigins();
 app.use(cors({

@@ -1,47 +1,55 @@
 import React from 'react'
-import { Link, useNavigate } from "react-router-dom"
-import { HouseIcon, AddressBookIcon, UserPlusIcon, SignOutIcon } from "@phosphor-icons/react"
+import { NavLink, useNavigate } from "react-router-dom"
+import { HouseIcon, AddressBookIcon, UserPlusIcon, ChartBarIcon, GearIcon, SignOutIcon, X } from "@phosphor-icons/react"
 import logo from "../../images/logo.svg"
 import "./sidebar.scss"
 
-const Sidebar = () => {
+const links = [
+    { to: '/dashboard', label: 'Dashboard', Icon: HouseIcon },
+    { to: '/lead', label: 'Leads', Icon: AddressBookIcon },
+    { to: '/addlead', label: 'Add Lead', Icon: UserPlusIcon },
+    { to: '/analytics', label: 'Analytics', Icon: ChartBarIcon },
+    { to: '/settings', label: 'Settings', Icon: GearIcon }
+];
+
+const Sidebar = ({ open, onClose }) => {
     const navigate = useNavigate();
 
-    const handleLogout = (e) => {
-        e.preventDefault(); 
+    const handleLogout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        navigate("/"); 
+        navigate("/");
     };
 
     return (
-        <div className="sidebar">
-            <div className="container_fluid">
-                <div className="sidebar_inr">
-                    <div className="nav_logo_otr">
-                        <Link to="/dashboard" className="logo_otr">
-                            <img src={logo} alt="logo" className='logo' />
-                        </Link>
-                        <nav className="nav_otr">
-                            <ul className="nav_ul">
-                                <li className="nav_li">
-                                   <Link to="/dashboard" className='heading_l link'><HouseIcon size={22} className="icon" /> Dashboard</Link>
-                                </li>
-                                <li className="nav_li">
-                                   <Link to="/lead" className='heading_l link'><AddressBookIcon size={22} className="icon" /> Leads</Link>
-                                </li>
-                                <li className="nav_li">
-                                   <Link to="/addlead" className='heading_l link'><UserPlusIcon size={22} className="icon" /> Add Lead</Link>
-                                </li>
-                            </ul>
-                        </nav>
-                    </div>
-                    <div className="action_otr" onClick={handleLogout} >
-                        <span className='heading_l link'><SignOutIcon size={22} className="icon" />Log out</span>
-                    </div>
-                </div>
+        <aside className={`app_sidebar${open ? ' open' : ''}`} aria-label="Main navigation">
+            <div className="sidebar_top">
+                <NavLink to="/dashboard" className="logo_link" aria-label="LeadCRM dashboard">
+                    <img src={logo} alt="LeadCRM" className="logo" />
+                </NavLink>
+                <button type="button" className="sidebar_close" onClick={onClose} aria-label="Close menu">
+                    <X size={20} weight="bold" />
+                </button>
             </div>
-        </div>
+
+            <nav className="sidebar_nav">
+                <ul>
+                    {links.map(({ to, label, Icon }) => (
+                        <li key={to}>
+                            <NavLink to={to} className={({ isActive }) => `nav_link heading_l${isActive ? ' active' : ''}`}>
+                                <Icon size={22} className="icon" />
+                                {label}
+                            </NavLink>
+                        </li>
+                    ))}
+                </ul>
+            </nav>
+
+            <button type="button" className="logout_btn heading_l" onClick={handleLogout}>
+                <SignOutIcon size={22} className="icon" />
+                Log out
+            </button>
+        </aside>
     )
 }
 

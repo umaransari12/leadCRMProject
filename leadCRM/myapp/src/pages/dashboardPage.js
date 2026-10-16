@@ -1,15 +1,11 @@
 import React from 'react'
-import Header from '../components/header/header'
-import DashboardLayoutSec from '../components/dasboardLayoutSec/dashboardLayoutSec'
+import AppShell from '../components/appShell/appShell'
+import DashboardSec from '../components/dashboardSec/dashboardSec'
 
-
-const DashboardPage = () => {
-  return (
-    <>
-    <Header/>
-    <DashboardLayoutSec/>
-    </>
-  )
-}
+const DashboardPage = () => (
+  <AppShell title="Dashboard">
+    <DashboardSec />
+  </AppShell>
+)
 
 export default DashboardPage

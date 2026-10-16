@@ -20,4 +20,7 @@ const getAllowedOrigins = () => {
     return configured;
 };
 
-module.exports = { getJwtSecret, getAllowedOrigins };
+// Google OAuth web client ID (public identifier, not a secret). Google sign-in stays disabled while this is unset.
+const getGoogleClientId = () => (process.env.GOOGLE_CLIENT_ID || '').trim();
+
+module.exports = { getJwtSecret, getAllowedOrigins, getGoogleClientId };

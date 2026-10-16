@@ -13,16 +13,23 @@ const userSchema = new mongoose.Schema({
         trim: true,
         lowercase: true
     },
+    // Accounts created through Google sign-in have no phone number until the user adds one in Settings.
     phone: {
         type: String,
-        required: [true, 'Please add a phone number']
+        required: [function () { return !this.googleId; }, 'Please add a phone number'],
+        default: ''
     },
- 
-   username: {
-    type: String,
-    required: false,
-    default: ""
-},
+    username: {
+        type: String,
+        required: false,
+        default: ''
+    },
+    // Set when the account was created with, or linked to, a Google account (the Google "sub" identifier).
+    googleId: {
+        type: String,
+        index: true,
+        sparse: true
+    },
     password: {
         type: String,
         required: [true, 'Please add a password'],
@@ -32,8 +39,7 @@ const userSchema = new mongoose.Schema({
     timestamps: true
 });
 
-
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
     if (!this.isModified('password')) {
         return next();
     }

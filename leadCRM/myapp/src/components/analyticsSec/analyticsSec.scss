@@ -1,0 +1,86 @@
+.analytics_sec {
+    .muted { color: var(--text-gray); }
+
+    .notice a { color: inherit; font-weight: 600; text-decoration: underline; }
+
+    .kpi_grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+
+        .kpi_value { color: var(--text-dark); font-size: 30px; margin-top: 6px; }
+    }
+
+    .analytics_grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+
+        .monthly_card { grid-column: 1 / -1; }
+    }
+
+    .card_title { color: var(--text-dark); margin-bottom: 16px; }
+
+    .column_chart {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 12px;
+        height: 220px;
+        align-items: end;
+
+        .column {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+
+            .column_bar {
+                width: 100%;
+                max-width: 56px;
+                min-height: 2px;
+                background: var(--primary);
+                border-radius: 8px 8px 0 0;
+                transition: height 0.3s ease;
+            }
+
+            .column_value, .column_label { color: var(--text-gray); }
+        }
+    }
+
+    .bar_list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+
+        .bar_label {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            color: var(--text-dark);
+            margin-bottom: 6px;
+
+            .bar_name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            .bar_count { font-weight: 600; }
+        }
+
+        .bar_track {
+            height: 8px;
+            background: var(--blue-lt);
+            border-radius: 4px;
+            overflow: hidden;
+
+            .bar_fill { height: 100%; background: var(--primary); border-radius: 4px; }
+        }
+    }
+}
+
+@media (max-width: 760px) {
+    .analytics_sec .analytics_grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

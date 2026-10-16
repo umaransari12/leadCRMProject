@@ -6,6 +6,8 @@ import SignupPage from "./pages/signupPage";
 import DashboardPage from "./pages/dashboardPage";
 import Leadpage from "./pages/leadpage";
 import AddLeadPage from "./pages/addLeadPage";
+import AnalyticsPage from "./pages/analyticsPage";
+import SettingsPage from "./pages/settingsPage";
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('token');
@@ -23,6 +25,14 @@ const PublicRoute = ({ children }) => {
   return children;
 };
 
+const protectedRoutes = [
+  { path: '/dashboard', element: <DashboardPage /> },
+  { path: '/lead', element: <Leadpage /> },
+  { path: '/addlead', element: <AddLeadPage /> },
+  { path: '/analytics', element: <AnalyticsPage /> },
+  { path: '/settings', element: <SettingsPage /> }
+];
+
 function App() {
   return (
     <BrowserRouter>
@@ -38,21 +48,10 @@ function App() {
           </PublicRoute>
         } />
 
-        <Route path="/dashboard" element={
-          <ProtectedRoute>
-            <DashboardPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/lead" element={
-          <ProtectedRoute>
-            <Leadpage />
-          </ProtectedRoute>
-        } />
-        <Route path="/addlead" element={
-          <ProtectedRoute>
-            <AddLeadPage />
-          </ProtectedRoute>
-        } />
+        {protectedRoutes.map(({ path, element }) => (
+          <Route key={path} path={path} element={<ProtectedRoute>{element}</ProtectedRoute>} />
+        ))}
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

@@ -1,321 +1,219 @@
-import React, { useState, useEffect, useRef } from 'react'; 
-import { Link, useSearchParams } from "react-router-dom";
-import { MagnifyingGlassIcon, CaretDownIcon, PlusIcon } from "@phosphor-icons/react";
+import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from "react-router-dom";
+import { MagnifyingGlassIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import "./leadSec.scss";
-import AddLeadSec from "../addLeadSec/addLeadSec"; 
+import AddLeadSec from "../addLeadSec/addLeadSec";
 import api from '../../api';
+import useLeads from '../../useLeads';
+import { STATUSES, statusLabel } from '../../leadUtils';
 
-// Older leads were saved with lower-case statuses ("new"); always show the canonical label.
-const statusLabel = (status) => {
-    const wanted = (status || 'New').toLowerCase();
-    return ['New', 'Contacted', 'Converted'].find((s) => s.toLowerCase() === wanted) || status;
-};
+const LEADS_PER_PAGE = 8;
 
 const LeadSec = () => {
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [leads, setLeads] = useState([]); 
-    const [loading, setLoading] = useState(true);
-
     const [searchParams] = useSearchParams();
+    const { leads, loading, error, reload } = useLeads();
+
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
-    const [selectedStatus, setSelectedStatus] = useState('All');
-    const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
-
+    const initialStatus = STATUSES.find((s) => s.toLowerCase() === (searchParams.get('status') || '').toLowerCase());
+    const [selectedStatus, setSelectedStatus] = useState(initialStatus || 'All');
     const [currentPage, setCurrentPage] = useState(1);
-    const leadsPerPage = 5; 
+    const [busyId, setBusyId] = useState(null);
+    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+    const [actionError, setActionError] = useState('');
 
-    const [activeActionId, setActiveActionId] = useState(null); 
-
-    const statusDropdownRef = useRef(null);
-    const actionsMenuRef = useRef(null);
-
-    const fetchLeads = async () => {
-        try {
-            setLoading(true);
-            const response = await api.get('/api/leads');
-            
-            if (response.data) {
-                if (Array.isArray(response.data)) {
-                    setLeads(response.data);
-                } else if (response.data.data && Array.isArray(response.data.data)) {
-                    setLeads(response.data.data);
-                } else if (response.data.leads && Array.isArray(response.data.leads)) {
-                    setLeads(response.data.leads);
-                } else {
-                    setLeads([]);
-                }
-            } else {
-                setLeads([]);
-            }
-        } catch (error) {
-            console.error('Could not load leads:', error.message);
-            setLeads([]);
-        } finally {
-            setLoading(false);
-        }
-    };
-
+    // The header search box navigates here with ?q=...; keep the filters in sync with the address bar.
     useEffect(() => {
-        fetchLeads();
-    }, []);
+        setSearchQuery(searchParams.get('q') || '');
+        const fromUrl = STATUSES.find((s) => s.toLowerCase() === (searchParams.get('status') || '').toLowerCase());
+        setSelectedStatus(fromUrl || 'All');
+    }, [searchParams]);
 
     useEffect(() => {
         setCurrentPage(1);
     }, [searchQuery, selectedStatus]);
 
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target)) {
-                setIsStatusDropdownOpen(false);
-            }
-            if (actionsMenuRef.current && !actionsMenuRef.current.contains(event.target)) {
-                setActiveActionId(null);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+    const filteredLeads = useMemo(() => {
+        const query = searchQuery.trim().toLowerCase();
+        return leads.filter((lead) => {
+            if (!lead) return false;
+            const matchesSearch = !query
+                || (lead.name || '').toLowerCase().includes(query)
+                || (lead.email || '').toLowerCase().includes(query)
+                || (lead.phone || '').toLowerCase().includes(query);
+            const matchesStatus = selectedStatus === 'All' || statusLabel(lead.status) === selectedStatus;
+            return matchesSearch && matchesStatus;
+        });
+    }, [leads, searchQuery, selectedStatus]);
+
+    const totalPages = Math.max(1, Math.ceil(filteredLeads.length / LEADS_PER_PAGE));
+    const page = Math.min(currentPage, totalPages);
+    const firstIndex = (page - 1) * LEADS_PER_PAGE;
+    const pageLeads = filteredLeads.slice(firstIndex, firstIndex + LEADS_PER_PAGE);
+
+    const describeError = (err, fallback) =>
+        err.response ? err.response.data?.message || fallback : 'Could not reach the server. Check your connection and try again.';
 
     const handleUpdateStatus = async (id, newStatus) => {
+        setActionError('');
+        setBusyId(id);
         try {
-            const response = await api.put(`/api/leads/${id}`, { status: newStatus });
-            if (response.data.success) {
-                setActiveActionId(null);
-                fetchLeads();
-            }
-        } catch (error) {
-            alert(error.response?.data?.message || 'Failed to update status');
+            await api.put(`/api/leads/${id}`, { status: newStatus });
+            await reload();
+        } catch (err) {
+            setActionError(describeError(err, 'Failed to update the status.'));
+        } finally {
+            setBusyId(null);
         }
     };
 
     const handleDeleteLead = async (id) => {
-        if (window.confirm('Are you sure you want to delete this lead?')) {
-            try {
-                const response = await api.delete(`/api/leads/${id}`);
-                if (response.data.success) {
-                    setActiveActionId(null);
-                    fetchLeads();
-                }
-            } catch (error) {
-                alert(error.response?.data?.message || 'Failed to delete lead');
-            }
+        setActionError('');
+        setBusyId(id);
+        try {
+            await api.delete(`/api/leads/${id}`);
+            setConfirmDeleteId(null);
+            await reload();
+        } catch (err) {
+            setActionError(describeError(err, 'Failed to delete the lead.'));
+        } finally {
+            setBusyId(null);
         }
     };
 
-    const filteredLeads = leads.filter((lead) => {
-        if (!lead) return false;
-        const matchesSearch = 
-            (lead.name?.toLowerCase().includes(searchQuery.toLowerCase())) ||
-            (lead.email?.toLowerCase().includes(searchQuery.toLowerCase())) ||
-            (lead.phone?.includes(searchQuery));
-
-        const matchesStatus = selectedStatus === 'All' || lead.status?.toLowerCase() === selectedStatus.toLowerCase();
-
-        return matchesSearch && matchesStatus;
-    });
-
-    const indexOfLastLead = currentPage * leadsPerPage;
-    const indexOfFirstLead = indexOfLastLead - leadsPerPage;
-    const currentLeads = filteredLeads.slice(indexOfFirstLead, indexOfLastLead);
-    const totalPages = Math.ceil(filteredLeads.length / leadsPerPage);
-
-    const pageNumbers = [];
-    for (let i = 1; i <= totalPages; i++) {
-        pageNumbers.push(i);
-    }
-
     return (
         <div className="lead_sec">
-            <div className="container">
-                <div className="lead_inr">
-                    <div className="lead_top">
-                        <h2 className="heading_h2 heading">Leads</h2>
-                        <p className="heading_l desc">Manage and track your leads</p>
-                    </div>
+            <div className="page_head">
+                <div>
+                    <h1 className="heading_h1 heading">Leads</h1>
+                    <p className="heading_l desc">Manage and track your leads</p>
+                </div>
+                <button type="button" className="primary_btn" onClick={() => setIsModalOpen(true)}>
+                    <PlusIcon size={18} /> Add Lead
+                </button>
+            </div>
 
-                    <div className="lead_searchbar_otr">
-                        <div className="status_searchbar_otr">
-                            <div className="searchbar_otr">
-                                <Link to="#" className='link'>
-                                    <MagnifyingGlassIcon size={16} className='icon' />
-                                </Link>
-                                <input 
-                                    type="text" 
-                                    placeholder="Search by name, email or phone.." 
-                                    className='input' 
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
-                            </div>
+            <div className="filters">
+                <label className="search_field">
+                    <MagnifyingGlassIcon size={18} aria-hidden="true" />
+                    <input
+                        type="search"
+                        placeholder="Search by name, email or phone"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        aria-label="Search leads"
+                    />
+                </label>
+                <label className="status_field">
+                    <span className="sr_only">Filter by status</span>
+                    <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)} aria-label="Filter by status">
+                        <option value="All">All Status</option>
+                        {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                </label>
+            </div>
 
-                            <div 
-                                ref={statusDropdownRef}
-                                className="status_otr" 
-                                onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
-                            >
-                                <p className="heading_l text">
-                                    {selectedStatus === 'All' ? 'All Status' : selectedStatus}
-                                </p>
-                                <div className='link'>
-                                    <CaretDownIcon size={22} className='icon' />
-                                </div>
+            {error && <div className="notice error" role="alert">{error}</div>}
+            {actionError && <div className="notice error" role="alert">{actionError}</div>}
 
-                                {isStatusDropdownOpen && (
-                                    <div className="status_dropdown_menu">
-                                        {['All', 'New', 'Contacted', 'Converted'].map((statusOption) => (
-                                            <div 
-                                                key={statusOption}
-                                                className="status_dropdown_item"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setSelectedStatus(statusOption);
-                                                    setIsStatusDropdownOpen(false);
-                                                }}
+            <div className="card table_card">
+                <table className="leads_table">
+                    <thead>
+                        <tr>
+                            <th className="heading_l">#</th>
+                            <th className="heading_l">Name</th>
+                            <th className="heading_l">Email</th>
+                            <th className="heading_l col_phone">Phone</th>
+                            <th className="heading_l">Status</th>
+                            <th className="heading_l col_source">Source</th>
+                            <th className="heading_l col_created">Created</th>
+                            <th className="heading_l col_actions"><span className="sr_only">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {loading ? (
+                            <tr className="state_row"><td colSpan="8" className="heading_l">Loading leads...</td></tr>
+                        ) : pageLeads.length === 0 ? (
+                            <tr className="state_row">
+                                <td colSpan="8" className="heading_l">
+                                    {leads.length === 0 ? 'No leads yet. Use "Add Lead" to create your first one.' : 'No leads match your search.'}
+                                </td>
+                            </tr>
+                        ) : (
+                            pageLeads.map((lead, index) => {
+                                const label = statusLabel(lead.status);
+                                const busy = busyId === lead._id;
+                                return (
+                                    <tr key={lead._id}>
+                                        <td data-label="#" className="heading_l col_index">{firstIndex + index + 1}</td>
+                                        <td data-label="Name" className="heading_l strong">{lead.name || 'N/A'}</td>
+                                        <td data-label="Email" className="heading_l wrap">{lead.email || 'N/A'}</td>
+                                        <td data-label="Phone" className="heading_l col_phone">{lead.phone || 'N/A'}</td>
+                                        <td data-label="Status" className="heading_l">
+                                            <select
+                                                className={`status_select ${label.toLowerCase()}`}
+                                                value={label}
+                                                disabled={busy}
+                                                onChange={(e) => handleUpdateStatus(lead._id, e.target.value)}
+                                                aria-label={`Status for ${lead.name || 'lead'}`}
                                             >
-                                                {statusOption === 'All' ? 'All Status' : statusOption}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="action_otr">
-                            <button 
-                                className='primary_btn btn' 
-                                onClick={() => setIsModalOpen(true)}
-                            >
-                                <PlusIcon size={22} className="icon" />
-                                Add Lead
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="table-otr">
-                        <table className="leads-table">
-                            <thead className='table_head'>
-                                <tr>
-                                    <th className='heading_l heading'>#</th>
-                                    <th className='heading_l heading'>Name</th>
-                                    <th className='heading_l heading'>Email</th>
-                                    <th className='heading_l heading'>Phone</th>
-                                    <th className='heading_l heading'>Status</th>
-                                    <th className='heading_l heading'>Source</th>
-                                    <th className='heading_l heading'>Created At</th>
-                                    <th className='heading_l heading'>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className='table_body'>
-                                {loading ? (
-                                    <tr>
-                                        <td colSpan="8" className='heading_l data load_text'>
-                                            Loading leads...
+                                                {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                                            </select>
                                         </td>
-                                    </tr>
-                                ) : currentLeads.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="8" className='heading_l data empty_text'>
-                                            No leads found.
+                                        <td data-label="Source" className="heading_l col_source">{lead.source || 'Website'}</td>
+                                        <td data-label="Created" className="heading_l col_created">
+                                            {lead.createdAt ? new Date(lead.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
                                         </td>
-                                    </tr>
-                                ) : (
-                                    currentLeads.map((lead, index) => (
-                                        <tr key={lead._id || index}>
-                                            <td className='heading_l data'>{indexOfFirstLead + index + 1}</td>
-                                            <td className='heading_l data font-bold'>{lead.name || 'N/A'}</td>
-                                            <td className='heading_l data'>{lead.email || 'N/A'}</td>
-                                            <td className='heading_l data'>{lead.phone || 'N/A'}</td>
-                                            <td className='heading_l data'>
-                                                <span className={`status-badge ${(lead.status || 'New').toLowerCase()}`}>
-                                                    {statusLabel(lead.status)}
+                                        <td className="col_actions">
+                                            {confirmDeleteId === lead._id ? (
+                                                <span className="confirm_delete">
+                                                    <button type="button" className="danger_btn" disabled={busy} onClick={() => handleDeleteLead(lead._id)}>
+                                                        Confirm delete
+                                                    </button>
+                                                    <button type="button" className="link_btn" disabled={busy} onClick={() => setConfirmDeleteId(null)}>
+                                                        Cancel
+                                                    </button>
                                                 </span>
-                                            </td>
-                                            <td className='heading_l data'>{lead.source || 'Website'}</td>
-                                            <td className='heading_l data'>
-                                                {lead.createdAt ? new Date(lead.createdAt).toLocaleDateString('en-GB', {
-                                                    day: 'numeric', month: 'short', year: 'numeric'
-                                                }) : 'N/A'}
-                                            </td>
-                                            
-                                            <td className='heading_l data actions-cell'>
-                                                <button 
-                                                    className="dots-btn"
-                                                    aria-label={`Actions for ${lead.name || 'lead'}`}
-                                                    onClick={() => setActiveActionId(activeActionId === lead._id ? null : lead._id)}
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    className="icon_action"
+                                                    onClick={() => setConfirmDeleteId(lead._id)}
+                                                    aria-label={`Delete ${lead.name || 'lead'}`}
+                                                    title="Delete lead"
                                                 >
-                                                    ⋮
+                                                    <TrashIcon size={18} />
                                                 </button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                );
+                            })
+                        )}
+                    </tbody>
+                </table>
 
-                                                {activeActionId === lead._id && (
-                                                    <div className="actions_pop_menu" ref={actionsMenuRef}>
-                                                        <div className="pop_menu_title">CHANGE STATUS</div>
-                                                        {['New', 'Contacted', 'Converted'].map((st) => (
-                                                            <div 
-                                                                key={st}
-                                                                className={`pop_menu_item ${(lead.status || 'New').toLowerCase() === st.toLowerCase() ? 'active_st' : ''}`}
-                                                                onClick={() => handleUpdateStatus(lead._id, st)}
-                                                            >
-                                                                {st}
-                                                            </div>
-                                                        ))}
-                                                        
-                                                        <hr className="pop_menu_divider" />
-                                                        
-                                                        <div 
-                                                            className="pop_menu_item delete_item"
-                                                            onClick={() => handleDeleteLead(lead._id)}
-                                                        >
-                                                            Delete Lead
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-
-                        <div className="table_bottom">
-                            <p className="heading_l results">
-                                Showing {filteredLeads.length === 0 ? 0 : indexOfFirstLead + 1} to {Math.min(indexOfLastLead, filteredLeads.length)} of {filteredLeads.length} results
-                            </p>
-                            
-                            <div className="pagination">
-                                <button 
-                                    className="heading_l page-nav"
-                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                    disabled={currentPage === 1}
-                                >
-                                    ‹
-                                </button>
-
-                                {pageNumbers.map((number) => (
-                                    <button 
-                                        key={number}
-                                        className={`heading_l page-num ${currentPage === number ? 'active' : ''}`}
-                                        onClick={() => setCurrentPage(number)}
-                                    >
-                                        {number}
-                                    </button>
-                                ))}
-
-                                <button 
-                                    className="heading_l page-nav"
-                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                    disabled={currentPage === totalPages || totalPages === 0}
-                                >
-                                    ›
-                                </button>
-                            </div>
-                        </div>
+                <div className="table_bottom">
+                    <p className="heading_l results">
+                        Showing {filteredLeads.length === 0 ? 0 : firstIndex + 1} to {Math.min(firstIndex + LEADS_PER_PAGE, filteredLeads.length)} of {filteredLeads.length} results
+                    </p>
+                    <div className="pagination">
+                        <button type="button" className="page_btn" onClick={() => setCurrentPage(Math.max(page - 1, 1))} disabled={page === 1} aria-label="Previous page">
+                            ‹
+                        </button>
+                        <span className="heading_l page_info">Page {page} of {totalPages}</span>
+                        <button type="button" className="page_btn" onClick={() => setCurrentPage(Math.min(page + 1, totalPages))} disabled={page === totalPages} aria-label="Next page">
+                            ›
+                        </button>
                     </div>
                 </div>
             </div>
+
             {isModalOpen && (
-                <AddLeadSec 
-                    onClose={() => setIsModalOpen(false)} 
-                    onLeadAdded={fetchLeads} 
+                <AddLeadSec
+                    variant="modal"
+                    onClose={() => setIsModalOpen(false)}
+                    onLeadAdded={reload}
                 />
             )}
         </div>

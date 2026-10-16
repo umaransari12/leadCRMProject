@@ -1,12 +1,11 @@
 import React from 'react'
-import LeadLayoutSec from '../components/leadLayoutSec/leadLayoutSec'
+import AppShell from '../components/appShell/appShell'
+import LeadSec from '../components/leadSec/leadSec'
 
-const Leadpage = () => {
-  return (
-    <>
-    <LeadLayoutSec/>
-    </>
-  )
-}
+const Leadpage = () => (
+  <AppShell title="Leads">
+    <LeadSec />
+  </AppShell>
+)
 
 export default Leadpage

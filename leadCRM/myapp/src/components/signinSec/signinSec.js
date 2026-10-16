@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from "react-router-dom"
-import dashboard from "../../images/dashboard.png"
-import logo from "../../images/logo.svg"
-import "./signinSec.scss"
+import AuthLayout from '../authLayout/authLayout'
+import PasswordInput from '../passwordInput/passwordInput'
+import GoogleAuthButton from '../googleAuthButton/googleAuthButton'
 import api from '../../api'
+import { saveSession, apiErrorMessage } from '../../session'
 
 const SigninSec = () => {
     const navigate = useNavigate();
@@ -13,90 +14,86 @@ const SigninSec = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
+    const finishSignIn = (data) => {
+        saveSession(data);
+        navigate("/dashboard");
+    };
+
     const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
         setLoading(true);
 
         try {
-            const response = await api.post('/api/auth/login', {
-                email,
-                password
-            });
-
+            const response = await api.post('/api/auth/login', { email: email.trim(), password });
             if (response.data.success) {
-                // Securely store the JWT Token and User info inside localStorage
-                localStorage.setItem('token', response.data.token);
-                localStorage.setItem('user', JSON.stringify(response.data.user));
-
-                navigate("/dashboard");
+                finishSignIn(response.data);
+                return;
             }
+            setError('Sign in failed. Please try again.');
         } catch (err) {
-            setError(
-                err.response
-                    ? err.response.data?.message || 'Login failed. Please try again.'
-                    : 'Could not reach the server. Check your connection and try again.'
-            );
-        } finally {
-            setLoading(false);
+            setError(apiErrorMessage(err, 'Sign in failed. Please try again.'));
         }
+        setLoading(false);
+    };
+
+    const handleGoogle = async (credential) => {
+        setError('');
+        setLoading(true);
+        try {
+            const response = await api.post('/api/auth/google', { credential });
+            if (response.data.success) {
+                finishSignIn(response.data);
+                return;
+            }
+            setError('Google sign-in failed. Please try again.');
+        } catch (err) {
+            setError(apiErrorMessage(err, 'Google sign-in failed. Please try again.'));
+        }
+        setLoading(false);
     };
 
     return (
-        <div className="signin_sec">
-            <div className="container_fluid">
-                <div className="signin_inr">
-                    <div className="row">
-                        <div className="col_img_otr">
-                            <div className="col_img_inr">
-                                <img src={dashboard} alt="img" className='img' />
-                            </div>
-                        </div>
-                        <div className="col_signin_otr">
-                            <div className="col_signin_inr">
-                                <div className="logo_otr">
-                                    <img src={logo} alt="logo" className='logo' />
-                                </div>
-                                <h1 className="heading_h1 heading">Welcome Back!</h1>
-                                <p className="heading_l desc">Sign in to your account and continue</p>
-                                
-                                {error && <div style={{ color: 'red', marginBottom: '15px', fontSize: '14px', fontWeight: 'bold' }}>{error}</div>}
-                                <form className="form_otr" onSubmit={handleLogin}>
-                                    <div className="input_otr">
-                                        <label className='heading_l text'>Email</label>
-                                        <input 
-                                            type="email" 
-                                            value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
-                                            className='input' 
-                                            placeholder='you@example.com'
-                                            required
-                                        />
-                                    </div>
-                                    <div className="input_otr">
-                                        <div className="password">
-                                            <label className='heading_l text'>Password</label>
-                                        </div>
-                                        <input 
-                                            type="password" 
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            className='input' 
-                                            placeholder='Enter your password'
-                                            required
-                                        />
-                                    </div>
-                                    <button type="submit" className='primary_btn btn' disabled={loading}>
-                                        {loading ? 'Signing In...' : 'Sign In'}
-                                    </button>
-                                </form>
-                                <p className="heading_l signup">Don't have an account? <Link to="/signup" className='link'>Sign up</Link></p>
-                            </div>
-                        </div>
-                    </div>
+        <AuthLayout
+            pageTitle="Sign in"
+            title="Welcome back!"
+            subtitle="Sign in to your account and continue"
+            footer={<>Don't have an account? <Link to="/signup">Sign up</Link></>}
+        >
+            {error && <div className="notice error" role="alert" style={{ marginTop: 20, marginBottom: 0 }}>{error}</div>}
+
+            <form className="auth_form" onSubmit={handleLogin} noValidate={false}>
+                <div className="field">
+                    <label className="heading_l" htmlFor="signin_email">Email</label>
+                    <input
+                        id="signin_email"
+                        type="email"
+                        name="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        autoComplete="email"
+                        required
+                    />
                 </div>
-            </div>
-        </div>
+                <PasswordInput
+                    id="signin_password"
+                    name="password"
+                    label="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    autoComplete="current-password"
+                    required
+                />
+                <button type="submit" className="primary_btn submit_btn" disabled={loading}>
+                    {loading ? 'Signing in...' : 'Sign In'}
+                </button>
+            </form>
+
+            <p className="heading_l divider">OR</p>
+            <GoogleAuthButton onCredential={handleGoogle} onError={setError} text="signin_with" disabled={loading} />
+        </AuthLayout>
     )
 }
 

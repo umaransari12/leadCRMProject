@@ -3,8 +3,9 @@ import "./addLeadSec.scss";
 import { X } from "@phosphor-icons/react";
 import api from '../../api';
 
-// onClose is optional: on the /addlead page the parent navigates away instead of closing a modal.
-const AddLeadSec = ({ onClose, onLeadAdded }) => {
+// variant="modal" overlays the current page; variant="page" renders as a normal card inside the app layout.
+// onClose is optional: the /addlead page passes a callback that navigates to the leads list.
+const AddLeadSec = ({ onClose, onLeadAdded, variant = 'modal' }) => {
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -52,15 +53,27 @@ const AddLeadSec = ({ onClose, onLeadAdded }) => {
         }
     };
 
-    return (
-        <div className="add_lead_modal_overlay">
-            <div className="add_lead_modal_content">
+    const isModal = variant === 'modal';
+    // A plain function (not a component defined during render), so the inputs keep focus while typing.
+    const wrap = (children) =>
+        isModal ? (
+            <div className="add_lead_modal_overlay" role="dialog" aria-modal="true" aria-label="Add new lead">
+                <div className="add_lead_modal_content">{children}</div>
+            </div>
+        ) : (
+            <div className="add_lead_page">
+                <div className="card add_lead_modal_content">{children}</div>
+            </div>
+        );
+
+    return wrap(
+            <>
 
                 <div className="modal_header">
                     <div className="text_side">
                         <h3 className="heading_h3 heading">Add New Lead</h3>
                     </div>
-                    {onClose && (
+                    {onClose && isModal && (
                         <button type="button" className="close_btn" onClick={onClose} aria-label="Close">
                             <X size={20} weight="bold" />
                         </button>
@@ -169,8 +182,7 @@ const AddLeadSec = ({ onClose, onLeadAdded }) => {
                     </div>
                 </form>
 
-            </div>
-        </div>
+            </>
     );
 };
 

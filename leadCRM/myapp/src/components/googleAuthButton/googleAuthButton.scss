@@ -1,0 +1,23 @@
+.google_slot {
+    display: flex;
+    justify-content: center;
+    min-height: 44px;
+
+    &.is_disabled { opacity: 0.6; pointer-events: none; }
+}
+
+.google_disabled {
+    display: flex;
+    justify-content: center;
+
+    .google_btn_disabled {
+        width: 100%;
+        max-width: 320px;
+        padding: 11px 16px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg-light);
+        color: var(--text-gray);
+        cursor: not-allowed;
+    }
+}
